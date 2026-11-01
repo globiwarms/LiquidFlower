@@ -206,25 +206,38 @@ function isMono(color) {
   return !color || color === "none";
 }
 
+function chipHTML(p) {
+  return `<span class="pchip${isMono(p.color) ? "" : " colored"}" style="--c:${p.color}">${lucideIcon(p.icon, 15, "#fff", 2)}</span>`;
+}
+
+function selectPetal(id) {
+  if (selectedId === id) return;
+  selectedId = id;
+  renderPetalList();
+  renderEditor(true);
+  renderFlowerPreview();
+}
+
 function renderPetalList() {
   const list = $("#petalList");
-  list.innerHTML = "";
-  cfg.petals.forEach((p) => {
-    const active = p.id === selectedId;
-    const b = document.createElement("button");
-    b.className = "pitem" + (active ? " active" : "");
-    b.innerHTML = `
-      <span class="pchip${isMono(p.color) ? "" : " colored"}" style="--c:${p.color}">${lucideIcon(p.icon, 15, "#fff", 2)}</span>
-      <span>${escapeHtml(p.name)}</span>
-      ${active ? `<span class="pcount">${cfg.petals.length}/${MAX_PETALS}</span>` : ""}`;
-    b.querySelector(".pchip svg").style.display = "block";
-    b.addEventListener("click", () => {
-      selectedId = p.id;
-      renderPetalList();
-      renderEditor();
-      renderFlowerPreview();
+  const sig = cfg.petals.map((p) => `${p.id}:${p.icon}:${p.color}:${p.name}`).join("|");
+  if (sig !== list._sig) {
+    list._sig = sig;
+    list.innerHTML = "";
+    cfg.petals.forEach((p) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "pitem";
+      b.dataset.id = p.id;
+      b.innerHTML = `${chipHTML(p)}<span class="pl-name">${escapeHtml(p.name)}</span>`;
+      b.addEventListener("click", () => selectPetal(p.id));
+      list.appendChild(b);
     });
-    list.appendChild(b);
+  }
+  list.querySelectorAll(".pitem").forEach((el) => {
+    el.classList.toggle("active", el.dataset.id === selectedId);
+    const p = cfg.petals.find((x) => x.id === el.dataset.id);
+    if (p) el.querySelector(".pchip").outerHTML = chipHTML(p);
   });
   $("#addPetal").disabled = cfg.petals.length >= MAX_PETALS;
 }
@@ -334,7 +347,7 @@ function renderParamRow() {
   }
 }
 
-async function renderEditor() {
+async function renderEditor(swap = false) {
   const p = currentPetal();
   const ed = $("#petalEditor");
   if (!p) {
@@ -348,6 +361,11 @@ async function renderEditor() {
   renderSwatches();
   renderActionSelect();
   renderParamRow();
+  if (swap) {
+    ed.classList.remove("swap");
+    void ed.offsetWidth; // restart the entrance animation
+    ed.classList.add("swap");
+  }
 }
 
 /* ---------- live flower preview (petals tab) ---------- */
@@ -470,6 +488,7 @@ async function init() {
   });
   $("#addPetal").querySelector(".bi").innerHTML = lucideIcon("plus", 14, "currentColor", 2.2);
   $("#pDelete").querySelector(".bi").innerHTML = lucideIcon("trash-2", 14, "currentColor", 2);
+  $("#pBrowse").querySelector(".bi").innerHTML = lucideIcon("folder-open", 14, "currentColor", 2);
 
   // titlebar lights
   $("#btnClose").addEventListener("click", () => invoke("close_settings"));

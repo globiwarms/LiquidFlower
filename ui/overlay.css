@@ -57,13 +57,14 @@ html, body {
   overflow: hidden;
 }
 
-/* The real backdrop: the screen capture taken the moment the menu opened. */
+/* The real backdrop: the screen capture taken the moment the menu opened.
+   The displacement filter bends it like liquid glass. */
 .petal .cap {
   position: absolute;
   inset: 0;
   background-repeat: no-repeat;
   transform: scale(1.18);
-  filter: blur(var(--glass-blur)) saturate(175%) brightness(1.07);
+  filter: url(#lg-refraction) blur(var(--glass-blur)) saturate(185%) brightness(1.08);
 }
 
 /* Full petal color under the glass. */
@@ -94,6 +95,24 @@ html, body {
     linear-gradient(rgba(150,158,172, calc(var(--petal-opacity) * 0.95)),
                     rgba(108,116,132, calc(var(--petal-opacity) * 1.0)));
 }
+
+/* Liquid sheen that rolls across the petal on hover. */
+.petal .sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.petal .sheen::before {
+  content: "";
+  position: absolute;
+  inset: -30% -60%;
+  background: linear-gradient(112deg, transparent 40%, rgba(255,255,255,0.17) 50%, transparent 60%);
+  transform: translateX(-75%);
+  transition: transform 640ms var(--ease-out);
+}
+.petal:hover .sheen::before { transform: translateX(75%); }
 
 /* Specular top edge, hairline rim, float shadow, glow. */
 .petal .spec {
@@ -175,10 +194,15 @@ html, body {
 
 /* ---------- Center (settings) ---------- */
 
+/* .core only positions and animates; .cbody is the glass that reacts to hover. */
 .core {
   position: absolute;
   width: calc(var(--petal-size) * 0.5);
   height: calc(var(--petal-size) * 0.5);
+}
+.core .cbody {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -194,8 +218,7 @@ html, body {
     0 8px 22px rgba(0, 0, 0, 0.30);
   transition: transform 190ms var(--spring), box-shadow 200ms ease-out;
 }
-.core svg { transition: transform 340ms var(--ease-out); }
-.core:hover {
+.core .cbody:hover {
   transform: scale(1.075);
   box-shadow:
     inset 0 1px 0.5px rgba(255, 255, 255, 0.65),
@@ -203,8 +226,7 @@ html, body {
     0 0 0 0.5px rgba(0, 0, 0, 0.22),
     0 10px 26px rgba(0, 0, 0, 0.34);
 }
-.core:hover svg { transform: rotate(45deg); }
-.core:active { transform: scale(0.93); }
+.core .cbody:active { transform: scale(0.93); }
 
 /* ---------- Animations ---------- */
 
@@ -215,11 +237,11 @@ html, body {
     opacity calc(var(--dur) * 0.6) ease-out var(--d, 0ms);
 }
 #menu.anim-bloom .petal.pre {
-  transform: translate(0, 0) scale(0.16);
+  transform: translate(0, 0) scale(0.16) rotate(-12deg);
   opacity: 0;
 }
 #menu.anim-bloom .petal.in {
-  transform: translate(var(--px), var(--py)) scale(1);
+  transform: translate(var(--px), var(--py)) scale(1) rotate(0deg);
   opacity: 1;
 }
 #menu.anim-bloom .core.pre, #menu.anim-bloom .core {

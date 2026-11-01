@@ -115,7 +115,7 @@ function petalHTML(p) {
   const mono = !p.color || p.color === "none";
   return `
     <div class="body${mono ? " mono" : ""}">
-      <div class="clip"><div class="cap"></div><div class="color"></div><div class="tint"></div></div>
+      <div class="clip"><div class="cap"></div><div class="color"></div><div class="tint"></div><div class="sheen"></div></div>
       <div class="spec"></div>
       <div class="icon">${icon}</div>
       <div class="label"></div>
@@ -212,7 +212,7 @@ function buildMenu(payload) {
   core.className = "core pre";
   core.style.left = cx - (CFG.appearance.petalSize * 0.5) / 2 + "px";
   core.style.top = cy - (CFG.appearance.petalSize * 0.5) / 2 + "px";
-  core.innerHTML = lucideIcon("settings", Math.round(CFG.appearance.petalSize * 0.2), "rgba(255,255,255,0.95)", 2);
+  core.innerHTML = `<div class="cbody">${lucideIcon("settings", Math.round(CFG.appearance.petalSize * 0.2), "rgba(255,255,255,0.95)", 2)}</div>`;
   core.title = "";
   core.addEventListener("mousedown", (e) => {
     e.stopPropagation();
