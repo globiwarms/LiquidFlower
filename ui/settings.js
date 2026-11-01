@@ -8,7 +8,7 @@ let ACTIONS = [];
 
 const PALETTE = [
   "#0A84FF", "#5AC8FA", "#64D2FF", "#30D158", "#FFD60A", "#FF9F0A",
-  "#FF453A", "#FF375F", "#BF5AF2", "#5E5CE6", "#FFFFFF", "#98989D",
+  "#FF453A", "#FF375F", "#BF5AF2", "#5E5CE6", "#FFFFFF",
 ];
 const ANIM = [["bloom", "Цветение"], ["cascade", "Каскад"], ["wave", "Волна"]];
 const TRIGGERS = [["middle", "Колёсико"], ["back", "Назад"], ["forward", "Вперёд"], ["hotkey", "Клавиши"]];
@@ -385,7 +385,8 @@ function renderFlowerPreview() {
   host.style.width = flowerW + "px";
   host.style.height = flowerH + "px";
   host.style.transform = `scale(${scale})`;
-  host.style.setProperty("--pv-op", ap.opacity);
+  host.style.setProperty("--fblur", ap.blur + "px");
+  host.classList.toggle("flat", !ap.liquidGlass);
   host.innerHTML = "";
   const n = cfg.petals.length;
   const glow = ap.glow ? ap.glowStrength : 0;
@@ -394,23 +395,17 @@ function renderFlowerPreview() {
     const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
     const x = Math.cos(a) * radius;
     const y = Math.sin(a) * radius;
-    const mono = isMono(p.color);
     const fp = document.createElement("div");
-    fp.className = "fp" + (mono ? " mono" : "") + (p.id === selectedId ? " sel" : "");
-    fp.style.setProperty("--fps", size + "px");
+    fp.dataset.sel = p.id === selectedId ? "1" : "";
+    fpVars(fp, p, size, ap);
+    if (p.id === selectedId) fp.classList.add("sel");
     fp.style.setProperty("--px", x + "px");
     fp.style.setProperty("--py", y + "px");
-    fp.style.setProperty("--fc", mono ? "transparent" : p.color);
-    fp.style.setProperty("--glow", mono ? 0 : glow);
-    fp.innerHTML = `
-      <div class="disc"><div class="fglass"></div><div class="fcolor"></div><div class="ftint"></div></div>
-      <div class="fspec"></div>
-      <div class="ficon">${lucideIcon(p.icon, Math.round(size * 0.27), "#fff", 1.9)}</div>
-      <div class="flabel">${escapeHtml(p.name)}</div>`;
+    fp.innerHTML = fpHTML(p, size, ap);
     fp.addEventListener("click", () => {
       selectedId = p.id;
       renderPetalList();
-      renderEditor();
+      renderEditor(true);
       renderFlowerPreview();
     });
     host.appendChild(fp);
@@ -429,20 +424,42 @@ function renderFlowerPreview() {
 
 /* ---------- previews ---------- */
 
+/* Builds a petal using the exact same structure and styles as the real
+   overlay petals, so the preview always matches reality. */
+function fpHTML(p, sizePx, opts) {
+  const mono = isMono(p.color);
+  const glow = opts.glow && !mono ? opts.glowStrength : 0;
+  return `
+    <div class="disc"><div class="fglass"></div><div class="fcolor"></div><div class="ftint"></div></div>
+    <div class="fspec"></div>
+    <div class="ficon">${lucideIcon(p.icon, Math.round(sizePx * 0.27), "#fff", 1.9)}</div>
+    <div class="flabel">${escapeHtml(p.name)}</div>`;
+}
+
+function fpVars(el, p, sizePx, ap) {
+  const mono = isMono(p.color);
+  el.className = `fp${mono ? " mono" : ""}${ap.liquidGlass ? "" : " flat"}${el.dataset.sel ? " sel" : ""}`;
+  el.style.setProperty("--fps", sizePx + "px");
+  // Neutral carrier for colorless petals so rims and glow still show.
+  el.style.setProperty("--fc", mono ? "#9aa3b2" : p.color);
+  el.style.setProperty("--glow", ap.glow ? ap.glowStrength : 0);
+  el.style.setProperty("--fblur", ap.blur + "px");
+}
+
 async function updatePreviews() {
   renderFlowerPreview();
 
-  // appearance page preview
+  // appearance page preview = the first petal, rendered exactly like in the menu
   const big = $("#pvPetalBig");
   if (big) {
     const ap = cfg.appearance;
-    big.style.setProperty("--pv-size", ap.petalSize + "px");
-    big.style.setProperty("--pv-op", ap.opacity);
-    big.style.setProperty("--pv-blur", ap.blur + "px");
-    big.style.setProperty("--pv-c", "#5AC8FA");
-    big.style.setProperty("--pv-glow", ap.glow ? ap.glowStrength : 0);
-    big.classList.toggle("no-glass", !ap.liquidGlass);
-    big.innerHTML = `<span class="pv-ic">${lucideIcon("sparkles", Math.round(ap.petalSize * 0.27), "#fff", 1.9)}</span><span class="pv-lb">Лепесток</span>`;
+    const p0 = cfg.petals[0] || { name: "Лепесток", icon: "sparkles", color: "none" };
+    fpVars(big, p0, ap.petalSize, ap);
+    big.innerHTML = fpHTML(p0, ap.petalSize, ap);
+    if (p0.action === "open_app" && p0.param) {
+      const html = await petalIconHTML(p0);
+      if (html) big.querySelector(".ficon").innerHTML = html;
+    }
   }
 }
 

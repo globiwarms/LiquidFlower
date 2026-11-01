@@ -47,7 +47,7 @@ html, body {
   cursor: pointer;
   transition: transform 190ms var(--spring);
 }
-.petal:hover .body { transform: scale(1.075); }
+.petal:hover .body { transform: translateY(-2px) scale(1.075); }
 .petal:active .body { transform: scale(0.93); }
 
 .petal .clip {
@@ -123,7 +123,7 @@ html, body {
   box-shadow:
     inset 0 1.5px 1px rgba(255, 255, 255, 0.55),
     inset 0 0 0 0.5px rgba(255, 255, 255, 0.22),
-    inset 0 -10px 18px rgba(255, 255, 255, 0.05),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.12),
     inset 0 0 0 1px color-mix(in srgb, var(--c) 20%, transparent),
     0 0 0 0.5px rgba(0, 0, 0, 0.12),
     0 14px 34px rgba(0, 0, 0, 0.18),
@@ -135,7 +135,7 @@ html, body {
   box-shadow:
     inset 0 1.5px 1px rgba(255, 255, 255, 0.62),
     inset 0 0 0 0.5px rgba(255, 255, 255, 0.30),
-    inset 0 -10px 18px rgba(255, 255, 255, 0.07),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.16),
     inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent),
     0 0 0 0.5px rgba(0, 0, 0, 0.12),
     0 16px 40px rgba(0, 0, 0, 0.22),
@@ -194,39 +194,63 @@ html, body {
 
 /* ---------- Center (settings) ---------- */
 
-/* .core only positions and animates; .cbody is the glass that reacts to hover. */
+/* .core only positions and animates; .cbody holds the same glass as petals
+   (real captured backdrop + neutral tint), so the gear never looks gray. */
 .core {
   position: absolute;
   width: calc(var(--petal-size) * 0.5);
   height: calc(var(--petal-size) * 0.5);
+  --c: #8b93a2;
 }
 .core .cbody {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.94);
-  background: radial-gradient(120% 120% at 32% 22%, rgba(255,255,255,0.38), rgba(255,255,255,0.10) 60%),
-              linear-gradient(rgba(70,76,90,0.72), rgba(44,48,60,0.78));
-  box-shadow:
-    inset 0 1px 0.5px rgba(255, 255, 255, 0.55),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.18),
-    0 0 0 0.5px rgba(0, 0, 0, 0.22),
-    0 8px 22px rgba(0, 0, 0, 0.30);
-  transition: transform 190ms var(--spring), box-shadow 200ms ease-out;
+  transition: transform 190ms var(--spring);
 }
-.core .cbody:hover {
-  transform: scale(1.075);
-  box-shadow:
-    inset 0 1px 0.5px rgba(255, 255, 255, 0.65),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.26),
-    0 0 0 0.5px rgba(0, 0, 0, 0.22),
-    0 10px 26px rgba(0, 0, 0, 0.34);
-}
+.core .cbody:hover { transform: scale(1.075); }
 .core .cbody:active { transform: scale(0.93); }
+.core .cbody > svg { position: relative; z-index: 2; filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.3)); }
+.core .clip {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.core .ccap {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  transform: scale(1.18);
+  filter: url(#lg-refraction) blur(var(--glass-blur)) saturate(185%) brightness(1.08);
+}
+.core .ctint {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(130% 130% at 28% 16%, rgba(255,255,255,0.34), rgba(255,255,255,0.05) 46%, rgba(255,255,255,0) 60%),
+    linear-gradient(rgba(255,255,255,0.12), rgba(255,255,255,0) 34%),
+    linear-gradient(rgba(150,158,172, calc(var(--petal-opacity) * 0.95)),
+                    rgba(108,116,132, calc(var(--petal-opacity) * 1.0)));
+}
+.core .cspec {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.55),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.12),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px color-mix(in srgb, var(--c) 20%, transparent),
+    0 0 0 0.5px rgba(0, 0, 0, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.30);
+}
+#menu.flat .core .ccap { display: none; }
 
 /* ---------- Animations ---------- */
 
@@ -289,7 +313,7 @@ html, body {
   transition:
     transform calc(var(--dur) * 0.45) var(--ease-in),
     opacity calc(var(--dur) * 0.45) ease-in;
-  transform: translate(0, 0) scale(0.12) !important;
+  transform: translate(0, 0) scale(0.12) rotate(-8deg) !important;
   opacity: 0 !important;
 }
 #menu .core.out {

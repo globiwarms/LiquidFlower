@@ -126,8 +126,9 @@ function setPetalLabel(el, name) {
   el.querySelector(".label").textContent = name;
 }
 
-function positionCap(el, screenX, screenY, region, scale) {
-  const cap = el.querySelector(".cap");
+function positionCap(el, screenX, screenY, region, scale, sel = ".cap") {
+  const cap = el.querySelector(sel);
+  if (!cap) return;
   if (!CFG._capture) {
     cap.style.display = "none";
     return;
@@ -187,19 +188,23 @@ function buildMenu(payload) {
   CFG.petals.forEach((p, i) => {
     const [x, y] = positions[i];
     const el = document.createElement("div");
-    el.className = "petal pre" + (!p.color || p.color === "none" ? " mono" : "");
+    const mono = !p.color || p.color === "none";
+    el.className = "petal pre" + (mono ? " mono" : "");
     // The element is anchored at the cursor; --px/--py place it on the ring.
     // Bloom grows from translate(0,0); cascade/wave start from the offset.
     el.style.left = cx - CFG.appearance.petalSize / 2 + "px";
     el.style.top = cy - CFG.appearance.petalSize / 2 + "px";
     el.style.setProperty("--px", x + "px");
     el.style.setProperty("--py", y + "px");
-    el.style.setProperty("--c", p.color);
+    // Neutral carrier for colorless petals so rims and glow still work.
+    el.style.setProperty("--c", mono ? "#9aa3b2" : p.color);
     el.style.setProperty("--d", Math.round(i * (16 / Math.max(0.5, CFG.animationSpeed || 1))) + "ms");
     el.innerHTML = petalHTML(p);
     setPetalLabel(el, p.name);
 
     positionCap(el, cx + x - CFG.appearance.petalSize / 2, cy + y - CFG.appearance.petalSize / 2, region, scale);
+    const capEl = el.querySelector(".cap");
+    if (capEl) capEl.dataset.depth = "9";
     el.addEventListener("mousedown", (e) => {
       e.stopPropagation();
       if (e.button === 0) activatePetal(p);
@@ -212,7 +217,10 @@ function buildMenu(payload) {
   core.className = "core pre";
   core.style.left = cx - (CFG.appearance.petalSize * 0.5) / 2 + "px";
   core.style.top = cy - (CFG.appearance.petalSize * 0.5) / 2 + "px";
-  core.innerHTML = `<div class="cbody">${lucideIcon("settings", Math.round(CFG.appearance.petalSize * 0.2), "rgba(255,255,255,0.95)", 2)}</div>`;
+  core.innerHTML = `<div class="cbody"><div class="clip"><div class="ccap"></div><div class="ctint"></div></div><div class="cspec"></div>${lucideIcon("settings", Math.round(CFG.appearance.petalSize * 0.2), "rgba(255,255,255,0.95)", 2)}</div>`;
+  positionCap(core, cx - (CFG.appearance.petalSize * 0.5) / 2, cy - (CFG.appearance.petalSize * 0.5) / 2, region, scale, ".ccap");
+  const coreCap = core.querySelector(".ccap");
+  if (coreCap) coreCap.dataset.depth = "13";
   core.title = "";
   core.addEventListener("mousedown", (e) => {
     e.stopPropagation();
@@ -282,5 +290,38 @@ window.addEventListener("contextmenu", (e) => {
   e.preventDefault();
   if (isOpen) closeMenu(true);
 });
+
+/* ---------- Parallax: the refracted backdrop shifts as the cursor moves,
+   like looking through real glass at different angles ---------- */
+(() => {
+  const target = { x: 0, y: 0 };
+  const cur = { x: 0, y: 0 };
+  let raf = null;
+
+  function step() {
+    cur.x += (target.x - cur.x) * 0.14;
+    cur.y += (target.y - cur.y) * 0.14;
+    const caps = menu.querySelectorAll(".petal .cap, .core .ccap");
+    caps.forEach((el) => {
+      const depth = parseFloat(el.dataset.depth || "9");
+      el.style.transform = `translate(${(-cur.x * depth).toFixed(2)}px, ${(-cur.y * depth).toFixed(2)}px) scale(1.18)`;
+    });
+    if (isOpen && (Math.abs(target.x - cur.x) > 0.002 || Math.abs(target.y - cur.y) > 0.002)) {
+      raf = requestAnimationFrame(step);
+    } else {
+      raf = null;
+    }
+  }
+
+  window.addEventListener("mousemove", (e) => {
+    if (!isOpen || !CFG || !CFG._capture) return;
+    const dx = e.clientX - CFG._cursor.x;
+    const dy = e.clientY - CFG._cursor.y;
+    const extent = CFG.appearance.radius * 1.3 + 60;
+    target.x = Math.max(-1, Math.min(1, dx / extent));
+    target.y = Math.max(-1, Math.min(1, dy / extent));
+    if (!raf) raf = requestAnimationFrame(step);
+  });
+})();
 
 invoke("overlay_ready").catch(() => {});

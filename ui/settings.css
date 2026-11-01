@@ -140,6 +140,9 @@ html, body {
 }
 #content::-webkit-scrollbar { width: 8px; }
 #content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+.icons::-webkit-scrollbar, .select-list::-webkit-scrollbar { width: 7px; }
+.icons::-webkit-scrollbar-thumb, .select-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+.icons::-webkit-scrollbar-track, .select-list::-webkit-scrollbar-track { background: transparent; }
 
 .page { display: none; max-width: 680px; }
 .page.active { display: block; }
@@ -154,12 +157,14 @@ html, body {
 }
 
 /* Editor content swap when another petal is selected */
-.peditor.swap .field, .peditor.swap .editor-actions { animation: pagein 200ms var(--ease-out) both; }
+.peditor.swap .field { animation: pagein 200ms var(--ease-out) both; }
 .peditor.swap .field:nth-child(2) { animation-delay: 25ms; }
 .peditor.swap .field:nth-child(3) { animation-delay: 50ms; }
 .peditor.swap .field:nth-child(4) { animation-delay: 75ms; }
 .peditor.swap .field:nth-child(5) { animation-delay: 100ms; }
-.peditor.swap .field:nth-child(6) { animation-delay: 125ms; }
+/* actions stay static so the action dropdown can overlap them */
+.field { position: relative; }
+.field:has(.select.open) { z-index: 20; }
 
 h1 {
   font-size: 26px;
@@ -342,49 +347,7 @@ h1 {
     linear-gradient(rgba(6, 10, 20, 0.10), rgba(6, 10, 20, 0.26)),
     url("./shared/wallpaper.jpg") center / cover no-repeat;
 }
-.pv-petal {
-  position: relative;
-  width: var(--pv-size, 112px);
-  height: var(--pv-size, 112px);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  background:
-    radial-gradient(130% 130% at 28% 16%, rgba(255,255,255,0.42), rgba(255,255,255,0.07) 46%, rgba(255,255,255,0) 60%),
-    linear-gradient(rgba(255,255,255,0.14), rgba(255,255,255,0) 34%),
-    linear-gradient(rgba(18,22,32,0.08), rgba(18,22,32,0.20));
-  box-shadow:
-    inset 0 1.5px 1px rgba(255,255,255,0.55),
-    inset 0 0 0 0.5px rgba(255,255,255,0.22),
-    inset 0 0 0 1px color-mix(in srgb, var(--pv-c) 22%, transparent),
-    0 0 0 0.5px rgba(0,0,0,0.12),
-    0 14px 34px rgba(0,0,0,0.25),
-    0 0 calc(var(--pv-size, 112px) * 0.14) color-mix(in srgb, var(--pv-c) calc(var(--pv-glow) * 42%), transparent),
-    0 0 calc(var(--pv-size, 112px) * 0.38) color-mix(in srgb, var(--pv-c) calc(var(--pv-glow) * 28%), transparent);
-  -webkit-backdrop-filter: url(#lg-refraction) blur(var(--pv-blur)) saturate(185%);
-          backdrop-filter: url(#lg-refraction) blur(var(--pv-blur)) saturate(185%);
-  transition: box-shadow 180ms ease, background 180ms ease, width 200ms var(--ease-out), height 200ms var(--ease-out);
-}
-@supports not ((backdrop-filter: url(#lg-refraction)) or (-webkit-backdrop-filter: url(#lg-refraction))) {
-  .pv-petal { -webkit-backdrop-filter: blur(var(--pv-blur)) saturate(185%); backdrop-filter: blur(var(--pv-blur)) saturate(185%); }
-}
-.pv-petal.no-glass {
-  -webkit-backdrop-filter: none; backdrop-filter: none;
-  background:
-    radial-gradient(120% 120% at 30% 18%, rgba(255,255,255,0.26), rgba(255,255,255,0) 55%),
-    linear-gradient(rgba(128,136,150, calc(var(--pv-op) * 0.95)), rgba(96,104,120, calc(var(--pv-op) * 1.02)));
-}
-.pv-petal .pv-ic { color: #fff; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.3)); display: flex; }
-.pv-petal .pv-ic img { width: calc(var(--pv-size, 112px) * 0.34); height: calc(var(--pv-size, 112px) * 0.34); }
-.pv-petal .pv-lb {
-  margin-top: 5px;
-  font-size: calc(var(--pv-size, 112px) * 0.112);
-  font-weight: 500;
-  color: rgba(255,255,255,0.96);
-  text-shadow: 0 1px 8px rgba(0,0,0,0.35);
-}
+.pv-petal { display: none; }
 
 /* ---------- Petals page ---------- */
 
@@ -631,12 +594,14 @@ h1 {
 .fp .fglass {
   position: absolute; inset: 0;
   border-radius: 50%;
-  -webkit-backdrop-filter: url(#lg-refraction) blur(13px) saturate(185%);
-          backdrop-filter: url(#lg-refraction) blur(13px) saturate(185%);
+  -webkit-backdrop-filter: url(#lg-refraction) blur(var(--fblur, 13px)) saturate(185%);
+          backdrop-filter: url(#lg-refraction) blur(var(--fblur, 13px)) saturate(185%);
 }
 @supports not ((backdrop-filter: url(#lg-refraction)) or (-webkit-backdrop-filter: url(#lg-refraction))) {
-  .fp .fglass { -webkit-backdrop-filter: blur(13px) saturate(185%); backdrop-filter: blur(13px) saturate(185%); }
+  .fp .fglass { -webkit-backdrop-filter: blur(var(--fblur, 13px)) saturate(185%); backdrop-filter: blur(var(--fblur, 13px)) saturate(185%); }
 }
+#pvFlower.flat .fglass, .fp.flat .fglass { display: none; }
+#pvFlower.flat .fp:not(.mono) .fcolor { opacity: min(0.9, calc(var(--pv-op, 0.5) * 1.6)); }
 .fp .fspec {
   position: absolute; inset: 0;
   border-radius: 50%;
