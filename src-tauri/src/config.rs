@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
-pub const MAX_PETALS: usize = 8;
+pub const MAX_PETALS: usize = 10;
 pub const APP_DIR_NAME: &str = "LiquidFlower";
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -49,11 +49,12 @@ pub struct Sounds {
     pub open: bool,
     pub close: bool,
     pub volume: f64,
+    pub open_type: String, // "bloom" | "glass" | "drop" | "pop" | "chime"
 }
 
 impl Default for Sounds {
     fn default() -> Self {
-        Self { open: true, close: true, volume: 0.6 }
+        Self { open: true, close: true, volume: 0.6, open_type: "bloom".into() }
     }
 }
 
@@ -81,12 +82,12 @@ impl Config {
             autostart: false,
             sounds: Sounds::default(),
             petals: vec![
-                petal("p1", "Микрофон", "mic-off", "#FF6B6B", "mic_mute", ""),
-                petal("p2", "Звук", "volume-x", "#5AC8FA", "mute", ""),
-                petal("p3", "Пауза", "play", "#FFD60A", "play_pause", ""),
-                petal("p4", "Трек", "skip-forward", "#30D158", "next_track", ""),
-                petal("p5", "Приложение", "app-window", "#BF5AF2", "open_app", ""),
-                petal("p6", "Ссылка", "link", "#FF9F0A", "link", ""),
+                petal("p1", "Микрофон", "mic-off", "none", "mic_mute", ""),
+                petal("p2", "Звук", "volume-x", "none", "mute", ""),
+                petal("p3", "Пауза", "play", "none", "play_pause", ""),
+                petal("p4", "Трек", "skip-forward", "none", "next_track", ""),
+                petal("p5", "Приложение", "app-window", "none", "open_app", ""),
+                petal("p6", "Ссылка", "link", "none", "link", ""),
             ],
         }
     }

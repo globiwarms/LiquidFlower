@@ -15,27 +15,58 @@ const Sound = (() => {
     if (ctx.state === "suspended") ctx.resume();
     return ctx;
   };
-  function blip({ f0, f1, dur, vol }) {
-    try {
-      const c = ensure();
-      const t = c.currentTime;
-      const o = c.createOscillator();
-      const g = c.createGain();
-      const lp = c.createBiquadFilter();
-      lp.type = "lowpass";
-      lp.frequency.value = 4200;
-      o.type = "sine";
-      o.frequency.setValueAtTime(f0, t);
-      o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(vol, t + 0.014);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.connect(g); g.connect(lp); lp.connect(c.destination);
-      o.start(t); o.stop(t + dur + 0.03);
-    } catch (_) { /* audio unavailable */ }
+  function blip({ f0, f1, dur, vol, type = "sine", delay = 0 }) {
+    const c = ensure();
+    const t = c.currentTime + delay;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 6400;
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(lp); lp.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.03);
   }
+  function noise({ dur, vol, freq = 2600, delay = 0 }) {
+    const c = ensure();
+    const t = c.currentTime + delay;
+    const len = Math.max(1, Math.floor(c.sampleRate * dur));
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass"; bp.frequency.value = freq; bp.Q.value = 0.9;
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(bp); bp.connect(g); g.connect(c.destination);
+    src.start(t);
+  }
+  const OPEN = {
+    bloom: (v) => blip({ f0: 330, f1: 680, dur: 0.16, vol: 0.5 * v }),
+    glass: (v) => {
+      blip({ f0: 1560, f1: 1900, dur: 0.18, vol: 0.26 * v, type: "triangle" });
+      blip({ f0: 2340, f1: 2500, dur: 0.13, vol: 0.10 * v, delay: 0.03 });
+    },
+    drop: (v) => blip({ f0: 950, f1: 320, dur: 0.15, vol: 0.5 * v }),
+    pop: (v) => {
+      noise({ dur: 0.07, vol: 0.22 * v, freq: 2800 });
+      blip({ f0: 210, f1: 130, dur: 0.10, vol: 0.38 * v });
+    },
+    chime: (v) => {
+      blip({ f0: 660, f1: 655, dur: 0.34, vol: 0.24 * v });
+      blip({ f0: 990, f1: 985, dur: 0.30, vol: 0.16 * v, delay: 0.05 });
+    },
+  };
   return {
-    open: (v) => blip({ f0: 330, f1: 680, dur: 0.16, vol: 0.5 * v }),
+    open: (v, type) => (OPEN[type] || OPEN.bloom)(v),
     close: (v) => blip({ f0: 640, f1: 300, dur: 0.11, vol: 0.38 * v }),
     tick: (v) => blip({ f0: 900, f1: 1050, dur: 0.06, vol: 0.2 * v }),
   };
@@ -81,9 +112,10 @@ function applyConfigVars() {
 function petalHTML(p) {
   const iconSize = Math.round(CFG.appearance.petalSize * 0.27);
   const icon = lucideIcon(p.icon, iconSize, "#fff", 1.9);
+  const mono = !p.color || p.color === "none";
   return `
-    <div class="body">
-      <div class="clip"><div class="cap"></div><div class="tint"></div></div>
+    <div class="body${mono ? " mono" : ""}">
+      <div class="clip"><div class="cap"></div><div class="color"></div><div class="tint"></div></div>
       <div class="spec"></div>
       <div class="icon">${icon}</div>
       <div class="label"></div>
@@ -133,6 +165,7 @@ function normalizeConfig(config) {
   config.animation = config.animation || "bloom";
   config.animationSpeed = config.animationSpeed ?? config.animation_speed ?? 1;
   config.sounds = config.sounds || { open: true, close: true, volume: 0.6 };
+  config.sounds.openType = config.sounds.openType || "bloom";
   config.petals = Array.isArray(config.petals) && config.petals.length ? config.petals : [];
 }
 
@@ -154,7 +187,7 @@ function buildMenu(payload) {
   CFG.petals.forEach((p, i) => {
     const [x, y] = positions[i];
     const el = document.createElement("div");
-    el.className = "petal pre";
+    el.className = "petal pre" + (!p.color || p.color === "none" ? " mono" : "");
     // The element is anchored at the cursor; --px/--py place it on the ring.
     // Bloom grows from translate(0,0); cascade/wave start from the offset.
     el.style.left = cx - CFG.appearance.petalSize / 2 + "px";
@@ -203,7 +236,7 @@ function showMenu(payload) {
   buildMenu(payload);
   isOpen = true;
   const v = CFG.sounds.volume;
-  if (CFG.sounds.open) Sound.open(v);
+  if (CFG.sounds.open) Sound.open(v, CFG.sounds.openType);
 
   // move petals from center to their places on the next frame
   requestAnimationFrame(() => {

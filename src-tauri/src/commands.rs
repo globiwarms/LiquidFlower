@@ -150,7 +150,7 @@ pub fn default_petal(id: String) -> Petal {
         id,
         name: "Лепесток".into(),
         icon: "sparkles".into(),
-        color: "#5AC8FA".into(),
+        color: "none".into(),
         action: "mute".into(),
         param: String::new(),
     }

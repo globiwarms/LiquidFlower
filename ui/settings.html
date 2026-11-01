@@ -31,15 +31,18 @@
       <main id="content">
 
         <!-- ЛЕПЕСТКИ -->
-        <section class="page active" data-page="petals">
+        <section class="page" data-page="petals">
           <h1>Лепестки</h1>
+          <div class="pv pv-flower">
+            <div class="pv-stage" id="pvFlowerStage">
+              <div id="pvFlower"></div>
+            </div>
+          </div>
           <div class="petals-layout">
             <aside class="plist">
               <div id="petalList"></div>
-              <button id="addPetal" class="add-btn"><span class="ab-ic"></span>Добавить</button>
             </aside>
             <div class="peditor" id="petalEditor">
-              <div class="pv"><div class="pv-stage"><div class="pv-petal" id="pvPetal"></div></div></div>
               <div class="field">
                 <label>Название</label>
                 <input type="text" id="pName" maxlength="18" />
@@ -63,8 +66,9 @@
                   <button id="pBrowse">Обзор…</button>
                 </div>
               </div>
-              <div class="danger-zone">
-                <button id="pDelete">Удалить лепесток</button>
+              <div class="editor-actions">
+                <button id="pDelete" class="btn action ghost-danger"><span class="bi"></span>Удалить лепесток</button>
+                <button id="addPetal" class="btn action primary"><span class="bi"></span>Добавить лепесток</button>
               </div>
             </div>
           </div>
@@ -170,7 +174,7 @@
               <button class="btn danger" id="btnReset">Сбросить</button>
             </div>
           </div>
-          <div class="foot">LiquidFlower <span id="ver">1.0</span></div>
+          <div class="foot">LiquidFlower <span id="ver">1.1.0</span></div>
         </section>
 
         <!-- ЗВУКИ -->
@@ -180,6 +184,10 @@
             <div class="row">
               <div class="rowlabel">Звук открытия</div>
               <button class="switch" id="swSndOpen" role="switch"></button>
+            </div>
+            <div class="row">
+              <div class="rowlabel">Тип звука открытия</div>
+              <div class="seg" id="segOpenType"></div>
             </div>
             <div class="row">
               <div class="rowlabel">Звук закрытия</div>

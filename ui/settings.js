@@ -12,31 +12,71 @@ const PALETTE = [
 ];
 const ANIM = [["bloom", "Цветение"], ["cascade", "Каскад"], ["wave", "Волна"]];
 const TRIGGERS = [["middle", "Колёсико"], ["back", "Назад"], ["forward", "Вперёд"], ["hotkey", "Клавиши"]];
-const MAX_PETALS = 8;
+const OPEN_SOUNDS = [
+  ["bloom", "Цветение"], ["glass", "Стекло"], ["drop", "Капля"],
+  ["pop", "Хлопок"], ["chime", "Колокольчик"],
+];
+const MAX_PETALS = 10;
 
 const $ = (s) => document.querySelector(s);
 
 /* ---------- sounds (same synth as overlay) ---------- */
 const Sound = (() => {
   let ctx;
-  function blip({ f0, f1, dur, vol }) {
-    try {
-      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state === "suspended") ctx.resume();
-      const t = ctx.currentTime;
-      const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
-      lp.type = "lowpass"; lp.frequency.value = 4200; o.type = "sine";
-      o.frequency.setValueAtTime(f0, t);
-      o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(vol, t + 0.014);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.connect(g); g.connect(lp); lp.connect(ctx.destination);
-      o.start(t); o.stop(t + dur + 0.03);
-    } catch (_) {}
+  const ensure = () => {
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  };
+  function blip({ f0, f1, dur, vol, type = "sine", delay = 0 }) {
+    const c = ensure();
+    const t = c.currentTime + delay;
+    const o = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 6400;
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(lp); lp.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.03);
   }
+  function noise({ dur, vol, freq = 2600 }) {
+    const c = ensure();
+    const t = c.currentTime;
+    const len = Math.max(1, Math.floor(c.sampleRate * dur));
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass"; bp.frequency.value = freq; bp.Q.value = 0.9;
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(bp); bp.connect(g); g.connect(c.destination);
+    src.start(t);
+  }
+  const OPEN = {
+    bloom: (v) => blip({ f0: 330, f1: 680, dur: 0.16, vol: 0.5 * v }),
+    glass: (v) => {
+      blip({ f0: 1560, f1: 1900, dur: 0.18, vol: 0.26 * v, type: "triangle" });
+      blip({ f0: 2340, f1: 2500, dur: 0.13, vol: 0.10 * v, delay: 0.03 });
+    },
+    drop: (v) => blip({ f0: 950, f1: 320, dur: 0.15, vol: 0.5 * v }),
+    pop: (v) => {
+      noise({ dur: 0.07, vol: 0.22 * v, freq: 2800 });
+      blip({ f0: 210, f1: 130, dur: 0.10, vol: 0.38 * v });
+    },
+    chime: (v) => {
+      blip({ f0: 660, f1: 655, dur: 0.34, vol: 0.24 * v });
+      blip({ f0: 990, f1: 985, dur: 0.30, vol: 0.16 * v, delay: 0.05 });
+    },
+  };
   return {
-    open: (v) => blip({ f0: 330, f1: 680, dur: 0.16, vol: 0.5 * v }),
+    open: (v, type) => (OPEN[type] || OPEN.bloom)(v),
     close: (v) => blip({ f0: 640, f1: 300, dur: 0.11, vol: 0.38 * v }),
   };
 })();
@@ -162,6 +202,10 @@ function currentPetal() {
   return cfg.petals.find((p) => p.id === selectedId) || null;
 }
 
+function isMono(color) {
+  return !color || color === "none";
+}
+
 function renderPetalList() {
   const list = $("#petalList");
   list.innerHTML = "";
@@ -170,7 +214,7 @@ function renderPetalList() {
     const b = document.createElement("button");
     b.className = "pitem" + (active ? " active" : "");
     b.innerHTML = `
-      <span class="pchip" style="--c:${p.color}">${lucideIcon(p.icon, 15, "#fff", 2)}</span>
+      <span class="pchip${isMono(p.color) ? "" : " colored"}" style="--c:${p.color}">${lucideIcon(p.icon, 15, "#fff", 2)}</span>
       <span>${escapeHtml(p.name)}</span>
       ${active ? `<span class="pcount">${cfg.petals.length}/${MAX_PETALS}</span>` : ""}`;
     b.querySelector(".pchip svg").style.display = "block";
@@ -178,6 +222,7 @@ function renderPetalList() {
       selectedId = p.id;
       renderPetalList();
       renderEditor();
+      renderFlowerPreview();
     });
     list.appendChild(b);
   });
@@ -244,15 +289,17 @@ function renderSwatches() {
   const p = currentPetal();
   const root = $("#pColors");
   root.innerHTML = "";
-  PALETTE.forEach((c) => {
+  ["none", ...PALETTE].forEach((c) => {
+    const active = isMono(p.color) ? c === "none" : c.toLowerCase() === String(p.color).toLowerCase();
     const b = document.createElement("button");
-    b.className = "swatch" + (c.toLowerCase() === p.color.toLowerCase() ? " active" : "");
-    b.style.background = c;
+    b.className = "swatch" + (c === "none" ? " none" : "") + (active ? " active" : "");
+    if (c !== "none") b.style.background = c;
+    b.title = c === "none" ? "Без цвета" : c;
     b.addEventListener("click", () => {
       p.color = c;
       renderSwatches();
       renderPetalList();
-      updatePreviews();
+      renderFlowerPreview();
       scheduleSave();
     });
     root.appendChild(b);
@@ -301,35 +348,76 @@ async function renderEditor() {
   renderSwatches();
   renderActionSelect();
   renderParamRow();
+}
 
-  const pv = $("#pvPetal");
-  pv.style.setProperty("--pv-c", p.color);
-  pv.innerHTML = `<span class="pv-ic">${lucideIcon(p.icon, 30, "#fff", 1.9)}</span><span class="pv-lb">${escapeHtml(p.name)}</span>`;
-  const html = await petalIconHTML(p);
-  if (p.id === selectedId) {
-    pv.querySelector(".pv-ic").innerHTML = html;
+/* ---------- live flower preview (petals tab) ---------- */
+
+function renderFlowerPreview() {
+  const stage = $("#pvFlowerStage");
+  const host = $("#pvFlower");
+  if (!stage || !host) return;
+  const ap = cfg.appearance;
+  const size = ap.petalSize;
+  const radius = ap.radius;
+  const flowerW = radius * 2 + size;
+  const flowerH = flowerW;
+  const sw = stage.clientWidth - 28;
+  const sh = stage.clientHeight - 28;
+  const scale = Math.min(1, sw / flowerW, sh / flowerH);
+  host.style.width = flowerW + "px";
+  host.style.height = flowerH + "px";
+  host.style.transform = `scale(${scale})`;
+  host.style.setProperty("--pv-op", ap.opacity);
+  host.innerHTML = "";
+  const n = cfg.petals.length;
+  const glow = ap.glow ? ap.glowStrength : 0;
+
+  cfg.petals.forEach((p, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+    const x = Math.cos(a) * radius;
+    const y = Math.sin(a) * radius;
+    const mono = isMono(p.color);
+    const fp = document.createElement("div");
+    fp.className = "fp" + (mono ? " mono" : "") + (p.id === selectedId ? " sel" : "");
+    fp.style.setProperty("--fps", size + "px");
+    fp.style.setProperty("--px", x + "px");
+    fp.style.setProperty("--py", y + "px");
+    fp.style.setProperty("--fc", mono ? "transparent" : p.color);
+    fp.style.setProperty("--glow", mono ? 0 : glow);
+    fp.innerHTML = `
+      <div class="disc"><div class="fglass"></div><div class="fcolor"></div><div class="ftint"></div></div>
+      <div class="fspec"></div>
+      <div class="ficon">${lucideIcon(p.icon, Math.round(size * 0.27), "#fff", 1.9)}</div>
+      <div class="flabel">${escapeHtml(p.name)}</div>`;
+    fp.addEventListener("click", () => {
+      selectedId = p.id;
+      renderPetalList();
+      renderEditor();
+      renderFlowerPreview();
+    });
+    host.appendChild(fp);
+  });
+
+  // .exe icons for the selected petal, if any
+  const p = currentPetal();
+  if (p && p.action === "open_app" && p.param) {
+    petalIconHTML(p).then((html) => {
+      if (p.id !== selectedId) return;
+      const fp = [...host.children].find((el) => el.classList.contains("sel"));
+      if (fp && html) fp.querySelector(".ficon").innerHTML = html;
+    });
   }
 }
 
-/* ---------- big preview (appearance) ---------- */
+/* ---------- previews ---------- */
 
 async function updatePreviews() {
-  const ap = cfg.appearance;
-
-  // editor mini preview
-  const p = currentPetal();
-  if (p) {
-    const pv = $("#pvPetal");
-    pv.style.setProperty("--pv-c", p.color);
-    pv.querySelector(".pv-lb").textContent = p.name;
-    const ic = pv.querySelector(".pv-ic");
-    const html = await petalIconHTML(p);
-    if (p.id === selectedId) ic.innerHTML = html;
-  }
+  renderFlowerPreview();
 
   // appearance page preview
   const big = $("#pvPetalBig");
   if (big) {
+    const ap = cfg.appearance;
     big.style.setProperty("--pv-size", ap.petalSize + "px");
     big.style.setProperty("--pv-op", ap.opacity);
     big.style.setProperty("--pv-blur", ap.blur + "px");
@@ -347,7 +435,7 @@ function renderAll() {
   renderEditor();
   $("#rowBlur").hidden = !cfg.appearance.liquidGlass;
   $("#rowGlow").hidden = !cfg.appearance.glow;
-  ["segAnim", "segTrigger", "rngSpeed", "rngOpacity", "rngBlur", "rngGlow", "rngSize", "rngRadius", "rngVol"].forEach((id) => {
+  ["segAnim", "segTrigger", "segOpenType", "rngSpeed", "rngOpacity", "rngBlur", "rngGlow", "rngSize", "rngRadius", "rngVol"].forEach((id) => {
     const el = $("#" + id);
     if (el && el._update) el._update();
   });
@@ -377,9 +465,11 @@ async function init() {
       document.querySelectorAll(".nav-item").forEach((x) => x.classList.toggle("active", x === b));
       document.querySelectorAll(".page").forEach((pg) => pg.classList.toggle("active", pg.dataset.page === b.dataset.page));
       if (b.dataset.page === "appearance") requestAnimationFrame(updatePreviews);
+      if (b.dataset.page === "petals") requestAnimationFrame(renderFlowerPreview);
     });
   });
-  $("#addPetal").querySelector(".ab-ic").innerHTML = lucideIcon("plus", 14, "currentColor", 2);
+  $("#addPetal").querySelector(".bi").innerHTML = lucideIcon("plus", 14, "currentColor", 2.2);
+  $("#pDelete").querySelector(".bi").innerHTML = lucideIcon("trash-2", 14, "currentColor", 2);
 
   // titlebar lights
   $("#btnClose").addEventListener("click", () => invoke("close_settings"));
@@ -390,7 +480,6 @@ async function init() {
   makeSeg($("#segAnim"), ANIM, () => cfg.animation, (v) => { cfg.animation = v; });
   bindRange($("#rngSpeed"), $("#valSpeed"), (v) => v.toFixed(2).replace(/0$/, "") + "×", () => cfg.animationSpeed, (v) => { cfg.animationSpeed = v; });
   makeSeg($("#segTrigger"), TRIGGERS, () => cfg.trigger, (v) => { cfg.trigger = v; updateHotkeyVisibility(); });
-
   // hotkey recorder
   const hkField = $("#hotkeyField");
   hkField.addEventListener("click", () => {
@@ -467,13 +556,19 @@ async function init() {
   // sounds
   bindSwitch($("#swSndOpen"), () => cfg.sounds.open, (v) => { cfg.sounds.open = v; });
   bindSwitch($("#swSndClose"), () => cfg.sounds.close, (v) => { cfg.sounds.close = v; });
+  makeSeg($("#segOpenType"), OPEN_SOUNDS,
+    () => cfg.sounds.openType || "bloom",
+    (v) => {
+      cfg.sounds.openType = v;
+      Sound.open(Math.max(0.05, cfg.sounds.volume), v);
+    });
   bindRange($("#rngVol"), $("#valVol"), (v) => v + "%", () => Math.round(cfg.sounds.volume * 100), (v) => { cfg.sounds.volume = v / 100; });
-  $("#btnPreview").addEventListener("click", () => Sound.open(Math.max(0.05, cfg.sounds.volume)));
+  $("#btnPreview").addEventListener("click", () => Sound.open(Math.max(0.05, cfg.sounds.volume), cfg.sounds.openType || "bloom"));
 
   // petals page
   $("#addPetal").addEventListener("click", async () => {
     if (cfg.petals.length >= MAX_PETALS) {
-      toast("Максимум 8 лепестков");
+      toast(`Максимум ${MAX_PETALS} лепестков`);
       return;
     }
     const p = await invoke("default_petal", { id: "p" + Date.now().toString(36) });
@@ -481,6 +576,7 @@ async function init() {
     selectedId = p.id;
     renderPetalList();
     renderEditor();
+    updatePreviews();
     scheduleSave();
   });
 
@@ -516,15 +612,16 @@ async function init() {
   delBtn.addEventListener("click", () => {
     if (!delBtn.classList.contains("armed")) {
       delBtn.classList.add("armed");
-      delBtn.textContent = "Точно удалить?";
+      delBtn.innerHTML = `<span class="bi">${lucideIcon("trash-2", 14, "currentColor", 2)}</span>Точно удалить?`;
       setTimeout(() => {
         delBtn.classList.remove("armed");
-        delBtn.textContent = "Удалить лепесток";
+        delBtn.innerHTML = `<span class="bi">${lucideIcon("trash-2", 14, "currentColor", 2)}</span>Удалить лепесток`;
       }, 3000);
       return;
     }
     delBtn.classList.remove("armed");
-    delBtn.textContent = "Удалить лепесток";
+    delBtn.innerHTML = `<span class="bi">${lucideIcon("trash-2", 14, "currentColor", 2)}</span>Удалить лепесток`;
+    delBtn.querySelector(".bi").innerHTML = lucideIcon("trash-2", 14, "currentColor", 2);
     if (cfg.petals.length <= 1) {
       toast("Нужен хотя бы один лепесток");
       return;
@@ -533,11 +630,17 @@ async function init() {
     selectedId = cfg.petals[0].id;
     renderPetalList();
     renderEditor();
+    updatePreviews();
     scheduleSave();
   });
 
   // close custom select on outside click
   document.addEventListener("click", () => $("#pAction").classList.remove("open"));
+
+  // live version from the app
+  try {
+    window.__TAURI__.app.getVersion().then((v) => { $("#ver").textContent = v; }).catch(() => {});
+  } catch (_) {}
 
   renderAll();
 }
