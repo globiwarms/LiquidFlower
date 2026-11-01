@@ -1,0 +1,267 @@
+/* LiquidFlower overlay — petals around the cursor. */
+
+:root {
+  --petal-size: 112px;
+  --petal-opacity: 0.5;
+  --glass-blur: 24px;
+  --glow-a: 0.35;
+  --dur: 420ms;
+  --stagger: 16ms;
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0.4);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+  font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+}
+
+#menu {
+  position: fixed;
+  inset: 0;
+  display: none;
+}
+#menu.open { display: block; }
+
+/* ---------- Petal ---------- */
+
+.petal {
+  position: absolute;
+  width: var(--petal-size);
+  height: var(--petal-size);
+  will-change: transform, opacity;
+}
+
+.petal .body {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 190ms var(--spring);
+}
+.petal:hover .body { transform: scale(1.075); }
+.petal:active .body { transform: scale(0.93); }
+
+.petal .clip {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+/* The real backdrop: the screen capture taken the moment the menu opened. */
+.petal .cap {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  transform: scale(1.18);
+  filter: blur(var(--glass-blur)) saturate(165%) brightness(1.05);
+}
+
+/* Neutral + colored tint over the capture. */
+.petal .tint {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(120% 120% at 30% 18%, rgba(255,255,255,0.30), rgba(255,255,255,0) 52%),
+    radial-gradient(85% 85% at 72% 94%, color-mix(in srgb, var(--c) 26%, transparent), transparent 55%),
+    linear-gradient(rgba(150,158,172, calc(var(--petal-opacity) * 0.92)),
+                    rgba(108,116,132, calc(var(--petal-opacity) * 1.0)));
+}
+
+/* Specular top edge, hairline rim, float shadow, glow. */
+.petal .spec {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.22),
+    inset 0 -10px 18px rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px color-mix(in srgb, var(--c) 20%, transparent),
+    0 0 0 0.5px rgba(0, 0, 0, 0.12),
+    0 14px 34px rgba(0, 0, 0, 0.18),
+    0 0 calc(var(--petal-size) * 0.14) color-mix(in srgb, var(--c) calc(var(--glow-a) * 42%), transparent),
+    0 0 calc(var(--petal-size) * 0.38) color-mix(in srgb, var(--c) calc(var(--glow-a) * 28%), transparent);
+  transition: box-shadow 200ms ease-out;
+}
+.petal:hover .spec {
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.62),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.30),
+    inset 0 -10px 18px rgba(255, 255, 255, 0.07),
+    inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent),
+    0 0 0 0.5px rgba(0, 0, 0, 0.12),
+    0 16px 40px rgba(0, 0, 0, 0.22),
+    0 0 calc(var(--petal-size) * 0.18) color-mix(in srgb, var(--c) calc(var(--glow-a) * 60%), transparent),
+    0 0 calc(var(--petal-size) * 0.46) color-mix(in srgb, var(--c) calc(var(--glow-a) * 42%), transparent);
+}
+
+/* No Liquid Glass: flat soft disc, no backdrop. */
+#menu.flat .cap { display: none; }
+#menu.flat .tint {
+  background:
+    radial-gradient(120% 120% at 30% 18%, rgba(255,255,255,0.26), rgba(255,255,255,0) 55%),
+    linear-gradient(rgba(128,136,150, calc(var(--petal-opacity) * 0.95)),
+                    rgba(96,104,120, calc(var(--petal-opacity) * 1.02)));
+}
+#menu.flat .tint::after {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(100% 100% at 68% 88%, var(--c), transparent 66%);
+  opacity: 0.75;
+}
+
+.petal .icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 15%;
+  color: #fff;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.28));
+}
+.petal .icon svg { display: block; }
+.petal .icon img {
+  width: calc(var(--petal-size) * 0.34);
+  height: calc(var(--petal-size) * 0.34);
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.28));
+}
+
+.petal .label {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: calc(var(--petal-size) * 0.16);
+  text-align: center;
+  font-size: calc(var(--petal-size) * 0.112);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.96);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8%;
+}
+
+/* ---------- Center (settings) ---------- */
+
+.core {
+  position: absolute;
+  width: calc(var(--petal-size) * 0.5);
+  height: calc(var(--petal-size) * 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.94);
+  background: radial-gradient(120% 120% at 32% 22%, rgba(255,255,255,0.38), rgba(255,255,255,0.10) 60%),
+              linear-gradient(rgba(70,76,90,0.72), rgba(44,48,60,0.78));
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.18),
+    0 0 0 0.5px rgba(0, 0, 0, 0.22),
+    0 8px 22px rgba(0, 0, 0, 0.30);
+  transition: transform 190ms var(--spring), box-shadow 200ms ease-out;
+}
+.core svg { transition: transform 340ms var(--ease-out); }
+.core:hover {
+  transform: scale(1.1);
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.65),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.26),
+    0 0 0 0.5px rgba(0, 0, 0, 0.22),
+    0 10px 26px rgba(0, 0, 0, 0.34);
+}
+.core:hover svg { transform: rotate(45deg); }
+.core:active { transform: scale(0.94); }
+
+/* ---------- Animations ---------- */
+
+/* bloom: petals grow out of the cursor */
+#menu.anim-bloom .petal {
+  transition:
+    transform var(--dur) var(--spring) var(--d, 0ms),
+    opacity calc(var(--dur) * 0.6) ease-out var(--d, 0ms);
+}
+#menu.anim-bloom .petal.pre {
+  transform: translate(0, 0) scale(0.16);
+  opacity: 0;
+}
+#menu.anim-bloom .petal.in {
+  transform: translate(var(--px), var(--py)) scale(1);
+  opacity: 1;
+}
+#menu.anim-bloom .core.pre, #menu.anim-bloom .core {
+  transition: transform var(--dur) var(--spring), opacity calc(var(--dur) * 0.6) ease-out;
+}
+#menu.anim-bloom .core.pre { transform: scale(0.2); opacity: 0; }
+#menu.anim-bloom .core.in { transform: scale(1); opacity: 1; }
+
+/* cascade: petals appear one by one in place */
+#menu.anim-cascade .petal {
+  transition:
+    transform calc(var(--dur) * 0.9) var(--spring) var(--d, 0ms),
+    opacity calc(var(--dur) * 0.7) ease-out var(--d, 0ms);
+  transform: translate(var(--px), var(--py)) scale(1);
+  opacity: 1;
+}
+#menu.anim-cascade .petal.pre {
+  transform: translate(var(--px), var(--py)) scale(0.45);
+  opacity: 0;
+}
+#menu.anim-cascade .core { transition: transform var(--dur) var(--spring), opacity 200ms ease-out; }
+#menu.anim-cascade .core.pre { transform: scale(0.3); opacity: 0; }
+#menu.anim-cascade .core.in { transform: scale(1); opacity: 1; }
+
+/* wave: petals rotate in */
+#menu.anim-wave .petal {
+  transition:
+    transform var(--dur) var(--ease-out) var(--d, 0ms),
+    opacity calc(var(--dur) * 0.8) ease-out var(--d, 0ms);
+}
+#menu.anim-wave .petal.pre {
+  transform: translate(var(--px), var(--py)) scale(0.25) rotate(-28deg);
+  opacity: 0;
+}
+#menu.anim-wave .petal.in {
+  transform: translate(var(--px), var(--py)) scale(1) rotate(0deg);
+  opacity: 1;
+}
+#menu.anim-wave .core { transition: transform var(--dur) var(--ease-out), opacity 200ms ease-out; }
+#menu.anim-wave .core.pre { transform: scale(0.3) rotate(-45deg); opacity: 0; }
+#menu.anim-wave .core.in { transform: scale(1) rotate(0); opacity: 1; }
+
+/* closing: everything melts back into the cursor */
+#menu .petal.out {
+  transition:
+    transform calc(var(--dur) * 0.45) var(--ease-in),
+    opacity calc(var(--dur) * 0.45) ease-in;
+  transform: translate(0, 0) scale(0.12) !important;
+  opacity: 0 !important;
+}
+#menu .core.out {
+  transition: transform calc(var(--dur) * 0.45) var(--ease-in), opacity calc(var(--dur) * 0.45) ease-in;
+  transform: scale(0.15) !important;
+  opacity: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #menu .petal, #menu .core {
+    transition-duration: 60ms !important;
+    transition-delay: 0ms !important;
+  }
+}

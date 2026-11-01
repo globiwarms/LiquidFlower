@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>LiquidFlower</title>
+  <link rel="stylesheet" href="settings.css" />
+</head>
+<body>
+  <div id="win">
+    <div id="titlebar">
+      <div class="lights">
+        <button class="light close" id="btnClose" aria-label="Закрыть"></button>
+        <button class="light min" id="btnMin" aria-label="Свернуть"></button>
+        <button class="light max" id="btnMax" aria-label="Развернуть"></button>
+      </div>
+    </div>
+
+    <div id="app">
+      <nav id="side">
+        <div class="brand">
+          <img src="./shared/appicon.png" alt="" />
+          <span>LiquidFlower</span>
+        </div>
+        <button class="nav-item active" data-page="petals"><span class="ni-icon"></span>Лепестки</button>
+        <button class="nav-item" data-page="behavior"><span class="ni-icon"></span>Поведение</button>
+        <button class="nav-item" data-page="appearance"><span class="ni-icon"></span>Внешний вид</button>
+        <button class="nav-item" data-page="system"><span class="ni-icon"></span>Система</button>
+        <button class="nav-item" data-page="sounds"><span class="ni-icon"></span>Звуки</button>
+      </nav>
+
+      <main id="content">
+
+        <!-- ЛЕПЕСТКИ -->
+        <section class="page active" data-page="petals">
+          <h1>Лепестки</h1>
+          <div class="petals-layout">
+            <aside class="plist">
+              <div id="petalList"></div>
+              <button id="addPetal" class="add-btn"><span class="ab-ic"></span>Добавить</button>
+            </aside>
+            <div class="peditor" id="petalEditor">
+              <div class="pv"><div class="pv-stage"><div class="pv-petal" id="pvPetal"></div></div></div>
+              <div class="field">
+                <label>Название</label>
+                <input type="text" id="pName" maxlength="18" />
+              </div>
+              <div class="field">
+                <label>Иконка</label>
+                <div class="icons" id="pIcons"></div>
+              </div>
+              <div class="field">
+                <label>Цвет</label>
+                <div class="swatches" id="pColors"></div>
+              </div>
+              <div class="field">
+                <label>Действие</label>
+                <div class="select" id="pAction"></div>
+              </div>
+              <div class="field" id="pParamRow" hidden>
+                <label id="pParamLabel">Путь</label>
+                <div class="paramrow">
+                  <input type="text" id="pParam" placeholder="C:\Program Files\..." />
+                  <button id="pBrowse">Обзор…</button>
+                </div>
+              </div>
+              <div class="danger-zone">
+                <button id="pDelete">Удалить лепесток</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ПОВЕДЕНИЕ -->
+        <section class="page" data-page="behavior">
+          <h1>Поведение</h1>
+          <div class="card">
+            <div class="row">
+              <div class="rowlabel">Стиль анимации</div>
+              <div class="seg" id="segAnim"></div>
+            </div>
+            <div class="row">
+              <div class="rowlabel">Скорость анимации</div>
+              <div class="slider-wrap">
+                <input type="range" id="rngSpeed" min="0.5" max="2" step="0.05" />
+                <span class="val" id="valSpeed"></span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <div class="rowlabel">Кнопка вызова</div>
+              <div class="seg" id="segTrigger"></div>
+            </div>
+            <div class="row sep-hidden" id="rowHotkey" hidden>
+              <div class="rowlabel">Сочетание клавиш</div>
+              <button class="hk" id="hotkeyField">—</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ВНЕШНИЙ ВИД -->
+        <section class="page" data-page="appearance">
+          <h1>Внешний вид</h1>
+          <div class="pv pv-page">
+            <div class="pv-stage" id="pvStage">
+              <div class="pv-petal big" id="pvPetalBig"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <div class="rowlabel">Прозрачность</div>
+              <div class="slider-wrap">
+                <input type="range" id="rngOpacity" min="15" max="85" step="1" />
+                <span class="val" id="valOpacity"></span>
+              </div>
+            </div>
+            <div class="row">
+              <div class="rowlabel">Liquid Glass</div>
+              <button class="switch" id="swGlass" role="switch"></button>
+            </div>
+            <div class="row" id="rowBlur">
+              <div class="rowlabel">Сила эффекта</div>
+              <div class="slider-wrap">
+                <input type="range" id="rngBlur" min="6" max="40" step="1" />
+                <span class="val" id="valBlur"></span>
+              </div>
+            </div>
+            <div class="row">
+              <div class="rowlabel">Свечение</div>
+              <button class="switch" id="swGlow" role="switch"></button>
+            </div>
+            <div class="row" id="rowGlow">
+              <div class="rowlabel">Интенсивность свечения</div>
+              <div class="slider-wrap">
+                <input type="range" id="rngGlow" min="0" max="100" step="1" />
+                <span class="val" id="valGlow"></span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <div class="rowlabel">Размер лепестков</div>
+              <div class="slider-wrap">
+                <input type="range" id="rngSize" min="88" max="150" step="1" />
+                <span class="val" id="valSize"></span>
+              </div>
+            </div>
+            <div class="row">
+              <div class="rowlabel">Радиус меню</div>
+              <div class="slider-wrap">
+                <input type="range" id="rngRadius" min="110" max="230" step="1" />
+                <span class="val" id="valRadius"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- СИСТЕМА -->
+        <section class="page" data-page="system">
+          <h1>Система</h1>
+          <div class="card">
+            <div class="row">
+              <div class="rowlabel">Запускать при входе в Windows</div>
+              <button class="switch" id="swAutostart" role="switch"></button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <div class="rowlabel">Вернуть настройки по умолчанию</div>
+              <button class="btn danger" id="btnReset">Сбросить</button>
+            </div>
+          </div>
+          <div class="foot">LiquidFlower <span id="ver">1.0</span></div>
+        </section>
+
+        <!-- ЗВУКИ -->
+        <section class="page" data-page="sounds">
+          <h1>Звуки</h1>
+          <div class="card">
+            <div class="row">
+              <div class="rowlabel">Звук открытия</div>
+              <button class="switch" id="swSndOpen" role="switch"></button>
+            </div>
+            <div class="row">
+              <div class="rowlabel">Звук закрытия</div>
+              <button class="switch" id="swSndClose" role="switch"></button>
+            </div>
+            <div class="row">
+              <div class="rowlabel">Громкость</div>
+              <div class="slider-wrap">
+                <input type="range" id="rngVol" min="0" max="100" step="1" />
+                <span class="val" id="valVol"></span>
+                <button class="btn ghost small" id="btnPreview">Проверить</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+  <div id="toast" hidden></div>
+  <script src="./shared/icons.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>
