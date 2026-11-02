@@ -1,6 +1,6 @@
 [package]
 name = "liquidflower"
-version = "1.3.0"
+version = "1.4.0"
 description = "Liquid Flower — radial menu with petals for Windows"
 edition = "2021"
 

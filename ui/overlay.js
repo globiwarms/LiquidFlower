@@ -15,24 +15,26 @@ const Sound = (() => {
     if (ctx.state === "suspended") ctx.resume();
     return ctx;
   };
-  function blip({ f0, f1, dur, vol, type = "sine", delay = 0 }) {
+  // Soft attack, exponential body, gentle lowpass — small and warm.
+  function tone({ f0, f1, dur, vol, type = "sine", delay = 0, lp = 5600 }) {
     const c = ensure();
     const t = c.currentTime + delay;
     const o = c.createOscillator();
     const g = c.createGain();
-    const lp = c.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.value = 6400;
+    const f = c.createBiquadFilter();
+    f.type = "lowpass";
+    f.frequency.value = lp;
+    f.Q.value = 0.4;
     o.type = type;
     o.frequency.setValueAtTime(f0, t);
-    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur * 0.85);
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(vol, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(lp); lp.connect(c.destination);
-    o.start(t); o.stop(t + dur + 0.03);
+    g.gain.linearRampToValueAtTime(vol, t + 0.018);
+    g.gain.setTargetAtTime(0.0001, t + dur * 0.55, dur * 0.22);
+    o.connect(g); g.connect(f); f.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.08);
   }
-  function noise({ dur, vol, freq = 2600, delay = 0 }) {
+  function breath({ dur, vol, freq, delay = 0 }) {
     const c = ensure();
     const t = c.currentTime + delay;
     const len = Math.max(1, Math.floor(c.sampleRate * dur));
@@ -42,7 +44,7 @@ const Sound = (() => {
     const src = c.createBufferSource();
     src.buffer = buf;
     const bp = c.createBiquadFilter();
-    bp.type = "bandpass"; bp.frequency.value = freq; bp.Q.value = 0.9;
+    bp.type = "bandpass"; bp.frequency.value = freq; bp.Q.value = 1.1;
     const g = c.createGain();
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -50,25 +52,41 @@ const Sound = (() => {
     src.start(t);
   }
   const OPEN = {
-    bloom: (v) => blip({ f0: 330, f1: 680, dur: 0.16, vol: 0.5 * v }),
+    // warm rise with a light sparkle on top
+    bloom: (v) => {
+      tone({ f0: 294, f1: 523, dur: 0.22, vol: 0.34 * v, lp: 3200 });
+      tone({ f0: 880, f1: 1175, dur: 0.17, vol: 0.10 * v, delay: 0.05, lp: 6000 });
+    },
+    // crystalline ping, bell partials, long soft tail
     glass: (v) => {
-      blip({ f0: 1560, f1: 1900, dur: 0.18, vol: 0.26 * v, type: "triangle" });
-      blip({ f0: 2340, f1: 2500, dur: 0.13, vol: 0.10 * v, delay: 0.03 });
+      tone({ f0: 1318, f1: 1306, dur: 0.50, vol: 0.16 * v, type: "sine", lp: 8000 });
+      tone({ f0: 1975, f1: 1960, dur: 0.36, vol: 0.07 * v, delay: 0.02, lp: 9000 });
+      breath({ dur: 0.10, vol: 0.05 * v, freq: 5200 });
     },
-    drop: (v) => blip({ f0: 950, f1: 320, dur: 0.15, vol: 0.5 * v }),
+    // water drop: quick pitch fall with a plop
+    drop: (v) => {
+      tone({ f0: 740, f1: 233, dur: 0.17, vol: 0.36 * v, lp: 2600 });
+      tone({ f0: 1480, f1: 466, dur: 0.10, vol: 0.08 * v, lp: 4200 });
+    },
+    // tight pop: airy tick over a warm thump
     pop: (v) => {
-      noise({ dur: 0.07, vol: 0.22 * v, freq: 2800 });
-      blip({ f0: 210, f1: 130, dur: 0.10, vol: 0.38 * v });
+      breath({ dur: 0.05, vol: 0.16 * v, freq: 3000 });
+      tone({ f0: 196, f1: 147, dur: 0.11, vol: 0.30 * v, lp: 1400 });
     },
+    // little major arpeggio, like a doorbell
     chime: (v) => {
-      blip({ f0: 660, f1: 655, dur: 0.34, vol: 0.24 * v });
-      blip({ f0: 990, f1: 985, dur: 0.30, vol: 0.16 * v, delay: 0.05 });
+      tone({ f0: 1046, f1: 1040, dur: 0.42, vol: 0.13 * v, lp: 7000 });
+      tone({ f0: 1318, f1: 1312, dur: 0.40, vol: 0.11 * v, delay: 0.06, lp: 7000 });
+      tone({ f0: 1568, f1: 1562, dur: 0.38, vol: 0.09 * v, delay: 0.12, lp: 7000 });
     },
   };
   return {
     open: (v, type) => (OPEN[type] || OPEN.bloom)(v),
-    close: (v) => blip({ f0: 640, f1: 300, dur: 0.11, vol: 0.38 * v }),
-    tick: (v) => blip({ f0: 900, f1: 1050, dur: 0.06, vol: 0.2 * v }),
+    close: (v) => {
+      tone({ f0: 523, f1: 262, dur: 0.13, vol: 0.24 * v, lp: 3000 });
+      tone({ f0: 1046, f1: 523, dur: 0.09, vol: 0.07 * v, lp: 5200 });
+    },
+    tick: (v) => tone({ f0: 987, f1: 1108, dur: 0.05, vol: 0.14 * v, lp: 6000 }),
   };
 })();
 
@@ -165,17 +183,22 @@ function normalizeConfig(config) {
   ap.radius = ap.radius ?? 150;
   config.animation = config.animation || "bloom";
   config.animationSpeed = config.animationSpeed ?? config.animation_speed ?? 1;
+  config.closeAfterAction = config.closeAfterAction ?? config.close_after_action ?? true;
   config.sounds = config.sounds || { open: true, close: true, volume: 0.6 };
   config.sounds.openType = config.sounds.openType || "bloom";
   config.petals = Array.isArray(config.petals) && config.petals.length ? config.petals : [];
 }
 
 function buildMenu(payload) {
-  const { cursor, region, scale, config, capture } = payload;
+  const { cursor, region, scale, config, capture, micMuted, soundMuted } = payload;
   normalizeConfig(config);
   CFG = config;
   CFG._capture = capture || null;
   CFG._cursor = { x: cursor.x / scale, y: cursor.y / scale };
+  CFG._micMuted = !!micMuted;
+  CFG._soundMuted = !!soundMuted;
+  CFG._petalEls = new Map();
+  CFG._parallax = [];
 
   applyConfigVars();
   menu.className = `anim-${CFG.animation || "bloom"}`;
@@ -205,6 +228,9 @@ function buildMenu(payload) {
     positionCap(el, cx + x - CFG.appearance.petalSize / 2, cy + y - CFG.appearance.petalSize / 2, region, scale);
     const capEl = el.querySelector(".cap");
     if (capEl) capEl.dataset.depth = "9";
+    if (p.action === "mic_mute" && CFG._micMuted) el.classList.add("alert");
+    if (CFG._parallax) CFG._parallax.push({ el: capEl, depth: 9 });
+    CFG._petalEls.set(p.id, el);
     el.addEventListener("mousedown", (e) => {
       e.stopPropagation();
       if (e.button === 0) activatePetal(p);
@@ -221,6 +247,7 @@ function buildMenu(payload) {
   positionCap(core, cx - (CFG.appearance.petalSize * 0.5) / 2, cy - (CFG.appearance.petalSize * 0.5) / 2, region, scale, ".ccap");
   const coreCap = core.querySelector(".ccap");
   if (coreCap) coreCap.dataset.depth = "13";
+  if (CFG._parallax) CFG._parallax.push({ el: coreCap, depth: 13 });
   core.title = "";
   core.addEventListener("mousedown", (e) => {
     e.stopPropagation();
@@ -236,7 +263,15 @@ function activatePetal(p) {
   const v = CFG.sounds.volume;
   if (CFG.sounds.open || CFG.sounds.close) Sound.tick(v);
   invoke("run_action", { action: p.action, param: p.param || "" }).catch(() => {});
-  closeMenu(true);
+
+  // live mic-state badge: the petal glows red while the mic is muted
+  if (p.action === "mic_mute") {
+    CFG._micMuted = !CFG._micMuted;
+    const el = CFG._petalEls && CFG._petalEls.get(p.id);
+    if (el) el.classList.toggle("alert", CFG._micMuted);
+  }
+
+  if (CFG.closeAfterAction !== false) closeMenu(true);
 }
 
 function showMenu(payload) {
@@ -301,12 +336,12 @@ window.addEventListener("contextmenu", (e) => {
   function step() {
     cur.x += (target.x - cur.x) * 0.14;
     cur.y += (target.y - cur.y) * 0.14;
-    const caps = menu.querySelectorAll(".petal .cap, .core .ccap");
-    caps.forEach((el) => {
-      const depth = parseFloat(el.dataset.depth || "9");
-      el.style.transform = `translate(${(-cur.x * depth).toFixed(2)}px, ${(-cur.y * depth).toFixed(2)}px) scale(1.18)`;
-    });
-    if (isOpen && (Math.abs(target.x - cur.x) > 0.002 || Math.abs(target.y - cur.y) > 0.002)) {
+    const targets = (CFG && CFG._parallax) || [];
+    for (const t of targets) {
+      if (!t.el) continue;
+      t.el.style.transform = `translate(${(-cur.x * t.depth).toFixed(2)}px, ${(-cur.y * t.depth).toFixed(2)}px) scale(1.18)`;
+    }
+    if (isOpen && targets.length && (Math.abs(target.x - cur.x) > 0.002 || Math.abs(target.y - cur.y) > 0.002)) {
       raf = requestAnimationFrame(step);
     } else {
       raf = null;

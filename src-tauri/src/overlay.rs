@@ -95,6 +95,8 @@ fn open_menu_inner(app: &AppHandle, cx: i32, cy: i32) {
         "scale": scale,
         "capture": capture,
         "config": cfg,
+        "micMuted": crate::actions::is_mic_muted(),
+        "soundMuted": crate::actions::is_sound_muted(),
     });
     let _ = win.emit("menu/show", payload);
 }

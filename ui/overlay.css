@@ -182,7 +182,7 @@ html, body {
   bottom: calc(var(--petal-size) * 0.16);
   text-align: center;
   font-size: calc(var(--petal-size) * 0.112);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.01em;
   color: rgba(255, 255, 255, 0.96);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
@@ -190,6 +190,41 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0 8%;
+  opacity: 0;
+  transition: opacity 280ms var(--ease-out);
+  transition-delay: calc(var(--d, 0ms) + 150ms);
+}
+.petal.in .label { opacity: 1; }
+#menu .petal.out .label, #menu .core.out .label {
+  opacity: 0 !important;
+  transition-delay: 0ms;
+  transition-duration: 150ms;
+}
+
+/* Mic-off alert: the petal glows red while the microphone is muted. */
+.petal.alert .tint {
+  background:
+    radial-gradient(130% 130% at 28% 16%, rgba(255,255,255,0.34), rgba(255,255,255,0.05) 46%, rgba(255,255,255,0) 60%),
+    linear-gradient(rgba(255,255,255,0.12), rgba(255,255,255,0) 34%),
+    linear-gradient(rgba(255, 69, 58, calc(var(--petal-opacity) * 0.50)),
+                    rgba(122, 28, 22, calc(var(--petal-opacity) * 0.62)));
+}
+.petal.alert .spec, .petal.alert:hover .spec {
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.55),
+    inset 0 -1px 1px rgba(255, 130, 120, 0.20),
+    inset 0 0 0 0.5px rgba(255, 160, 150, 0.35),
+    inset 0 0 0 1px rgba(255, 69, 58, 0.45),
+    0 0 0 0.5px rgba(0, 0, 0, 0.12),
+    0 14px 34px rgba(0, 0, 0, 0.18),
+    0 0 calc(var(--petal-size) * 0.16) rgba(255, 69, 58, 0.36),
+    0 0 calc(var(--petal-size) * 0.44) rgba(255, 69, 58, 0.24);
+}
+#menu.flat .petal.alert .tint {
+  background:
+    radial-gradient(130% 130% at 28% 16%, rgba(255,255,255,0.26), rgba(255,255,255,0) 55%),
+    linear-gradient(rgba(255, 69, 58, calc(var(--petal-opacity) * 0.52)),
+                    rgba(122, 28, 22, calc(var(--petal-opacity) * 0.64)));
 }
 
 /* ---------- Center (settings) ---------- */

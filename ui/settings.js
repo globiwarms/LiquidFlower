@@ -470,7 +470,7 @@ function renderAll() {
   renderEditor();
   $("#rowBlur").hidden = !cfg.appearance.liquidGlass;
   $("#rowGlow").hidden = !cfg.appearance.glow;
-  ["segAnim", "segTrigger", "segOpenType", "rngSpeed", "rngOpacity", "rngBlur", "rngGlow", "rngSize", "rngRadius", "rngVol"].forEach((id) => {
+  ["segAnim", "segTrigger", "segOpenType", "rngSpeed", "rngOpacity", "rngBlur", "rngGlow", "rngSize", "rngRadius", "rngVol", "swCloseAfter"].forEach((id) => {
     const el = $("#" + id);
     if (el && el._update) el._update();
   });
@@ -569,6 +569,7 @@ async function init() {
   bindRange($("#rngRadius"), $("#valRadius"), (v) => v + " px", () => cfg.appearance.radius, (v) => { cfg.appearance.radius = v; });
 
   // system
+  bindSwitch($("#swCloseAfter"), () => cfg.closeAfterAction !== false, (v) => { cfg.closeAfterAction = v; });
   bindSwitch($("#swAutostart"), () => cfg.autostart, (v) => { cfg.autostart = v; });
   const resetBtn = $("#btnReset");
   resetBtn.addEventListener("click", async () => {

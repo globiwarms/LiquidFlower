@@ -65,6 +65,7 @@ pub struct Config {
     pub hotkey: String,       // e.g. "ctrl+alt+KeyS"
     pub animation: String,    // "bloom" | "cascade" | "wave"
     pub animation_speed: f64, // 0.5 .. 2.0
+    pub close_after_action: bool,
     pub appearance: Appearance,
     pub autostart: bool,
     pub sounds: Sounds,
@@ -78,6 +79,7 @@ impl Config {
             hotkey: String::new(),
             animation: "bloom".into(),
             animation_speed: 1.0,
+            close_after_action: true,
             appearance: Appearance::default(),
             autostart: false,
             sounds: Sounds::default(),
@@ -125,9 +127,14 @@ pub fn config_path() -> PathBuf {
 }
 
 pub fn load() -> Config {
-    fs::read_to_string(config_path())
+    fs::read(config_path())
         .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
+        .and_then(|bytes| {
+            // Tolerate a UTF-8 BOM (some editors, e.g. Notepad, write one).
+            let rest = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF][..]).unwrap_or(&bytes);
+            let s = String::from_utf8_lossy(rest).into_owned();
+            serde_json::from_str(&s).ok()
+        })
         .unwrap_or_else(Config::defaults)
 }
 

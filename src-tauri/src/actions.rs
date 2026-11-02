@@ -148,6 +148,28 @@ fn minimize_all() -> Result<(), String> {
     })
 }
 
+/// Current mute state of the default capture (microphone) device.
+pub fn is_mic_muted() -> bool {
+    with_com(|| {
+        let vol = match endpoint(false) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
+        unsafe { vol.GetMute().map(|m| m.as_bool()).unwrap_or(false) }
+    })
+}
+
+/// Current mute state of the default render (speakers) device.
+pub fn is_sound_muted() -> bool {
+    with_com(|| {
+        let vol = match endpoint(true) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
+        unsafe { vol.GetMute().map(|m| m.as_bool()).unwrap_or(false) }
+    })
+}
+
 pub fn execute(action: &str, param: &str) -> Result<(), String> {
     match action {
         "open_app" => shell_open(param),
